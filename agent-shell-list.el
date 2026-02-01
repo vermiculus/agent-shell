@@ -76,7 +76,7 @@
          ;; Current working directory
          ("Directory" 30 t)
          ;; Idle, Thinking, Needs Permission
-         ("Status" 18 t)
+         ("Status" 5 t)
          ;; How many prompts have been sent -- proxy for context rot
          ("Prompts" 7 (lambda (a b)
                         (< (string-to-number (aref (cadr a) 4))
@@ -102,16 +102,16 @@
   "Derive the status string from STATE.
 
 Returns a propertized string:
-- \"Needs Permission\" if any tool calls are awaiting permission
-- \"Thinking\" if heartbeat status is busy
-- \"Idle\" otherwise"
+- \"ask\" if any tool calls are awaiting permission
+- \"think\" if heartbeat status is busy
+- \"idle\" otherwise"
   (cond
    ((agent-shell-list--has-pending-permission-p state)
-    (propertize "Needs Permission" 'face 'warning))
+    (propertize "ask" 'face 'warning))
    ((eq (map-nested-elt state '(:heartbeat :status)) 'busy)
-    (propertize "Thinking" 'face 'font-lock-keyword-face))
+    (propertize "think" 'face 'font-lock-keyword-face))
    (t
-    (propertize "Idle" 'face 'success))))
+    (propertize "idle" 'face 'success))))
 
 (defun agent-shell-list--entries ()
   "Generate entries for the agent shell list."
