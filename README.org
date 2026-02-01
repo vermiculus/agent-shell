@@ -417,13 +417,19 @@ The agent shell list provides a centralized view to manage multiple agent sessio
 
 - =RET= - Switch to shell or viewport (respects =agent-shell-prefer-viewport-interaction=)
 - =o= - Switch to shell buffer directly
-- =v= - Switch to viewport buffer
+- =O= - Switch to viewport buffer
 - =t= - Open transcript
-- =i= - Interrupt agent
 - =N= - Start new shell in same project (with prefix arg, choose different agent type)
 - =k= - Kill agent buffer
 - =g= - Refresh list
 - =q= - Quit window
+
+Session commands (consistent with =agent-shell-help-menu=):
+
+- =m= - Cycle session modes
+- =M= - Set session mode
+- =v= - Set session model
+- =C= - Interrupt agent
 
 *** Setting a default agent for all new shells
 

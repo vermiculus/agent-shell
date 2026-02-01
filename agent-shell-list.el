@@ -47,6 +47,9 @@
 (declare-function agent-shell-viewport--buffer "agent-shell-viewport")
 (declare-function agent-shell--dwim "agent-shell")
 (declare-function agent-shell--resolve-session-mode-name "agent-shell")
+(declare-function agent-shell-cycle-session-mode "agent-shell")
+(declare-function agent-shell-set-session-mode "agent-shell")
+(declare-function agent-shell-set-session-model "agent-shell")
 
 (defvar agent-shell-list--refresh-timer nil
   "Timer for auto-refreshing the agent shell list.")
@@ -56,11 +59,15 @@
     (set-keymap-parent map tabulated-list-mode-map)
     (define-key map (kbd "RET") #'agent-shell-list-goto-default)
     (define-key map (kbd "o") #'agent-shell-list-goto-shell)
-    (define-key map (kbd "v") #'agent-shell-list-goto-viewport)
+    (define-key map (kbd "O") #'agent-shell-list-goto-viewport)
     (define-key map (kbd "t") #'agent-shell-list-open-transcript)
-    (define-key map (kbd "i") #'agent-shell-list-interrupt)
     (define-key map (kbd "N") #'agent-shell-list-new-shell)
     (define-key map (kbd "k") #'agent-shell-list-kill)
+    ;; Session commands (consistent with agent-shell-help-menu)
+    (define-key map (kbd "m") #'agent-shell-list-cycle-session-mode)
+    (define-key map (kbd "M") #'agent-shell-list-set-session-mode)
+    (define-key map (kbd "v") #'agent-shell-list-set-session-model)
+    (define-key map (kbd "C") #'agent-shell-list-interrupt)
     map)
   "Keymap for `agent-shell-list-mode'.")
 
@@ -266,6 +273,27 @@ Returns the mode name if available, otherwise returns an empty string."
   (when-let ((buffer (agent-shell-list--get-buffer-at-point)))
     (with-current-buffer buffer
       (agent-shell-interrupt))))
+
+(defun agent-shell-list-cycle-session-mode ()
+  "Cycle through session modes for the agent at point."
+  (interactive)
+  (when-let ((buffer (agent-shell-list--get-buffer-at-point)))
+    (with-current-buffer buffer
+      (agent-shell-cycle-session-mode))))
+
+(defun agent-shell-list-set-session-mode ()
+  "Set session mode for the agent at point."
+  (interactive)
+  (when-let ((buffer (agent-shell-list--get-buffer-at-point)))
+    (with-current-buffer buffer
+      (agent-shell-set-session-mode))))
+
+(defun agent-shell-list-set-session-model ()
+  "Set session model for the agent at point."
+  (interactive)
+  (when-let ((buffer (agent-shell-list--get-buffer-at-point)))
+    (with-current-buffer buffer
+      (agent-shell-set-session-model))))
 
 (declare-function agent-shell-select-config "agent-shell")
 
