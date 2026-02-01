@@ -68,13 +68,20 @@
 
 \\{agent-shell-list-mode-map}"
   (setq tabulated-list-format
-        [("Agent" 15 t)
+        [
+         ;; Claude Code, Codex, etc
+         ("Agent" 15 t)
+         ;; Project name
          ("Project" 20 t)
+         ;; Current working directory
          ("Directory" 30 t)
+         ;; Idle, Thinking, Needs Permission
          ("Status" 18 t)
+         ;; How many prompts have been sent -- proxy for context rot
          ("Prompts" 7 (lambda (a b)
                         (< (string-to-number (aref (cadr a) 4))
                            (string-to-number (aref (cadr b) 4)))))
+         ;; Recent activity (buffer modification tick)
          ("Activity" 10 (lambda (a b)
                           (< (string-to-number (aref (cadr a) 5))
                              (string-to-number (aref (cadr b) 5)))))])
