@@ -592,6 +592,7 @@ OUTGOING-REQUEST-DECORATOR (passed through to `acp-make-client')."
         (cons :last-entry-type nil)
         (cons :chunked-group-count 0)
         (cons :request-count 0)
+        (cons :last-activity-time nil)
         (cons :tool-calls nil)
         (cons :available-commands nil)
         (cons :available-modes nil)
@@ -965,6 +966,7 @@ Flow:
     (map-put! (agent-shell--state) :request-count
               ;; TODO: Make public in shell-maker.
               (shell-maker--current-request-id))
+    (map-put! (agent-shell--state) :last-activity-time (current-time))
     (cond ((not (map-elt (agent-shell--state) :client))
            ;; Needs a client
            (agent-shell--emit-event :event 'init-started)
@@ -1131,6 +1133,7 @@ COMMAND, when present, may be a shell command string or an argv vector."
 
 (cl-defun agent-shell--on-notification (&key state acp-notification)
   "Handle incoming ACP-NOTIFICATION using STATE."
+  (map-put! state :last-activity-time (current-time))
   (cond ((equal (map-elt acp-notification 'method) "session/update")
          (cond
           ((equal (map-nested-elt acp-notification '(params update sessionUpdate)) "tool_call")

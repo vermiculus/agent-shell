@@ -68,28 +68,45 @@
 
 \\{agent-shell-list-mode-map}"
   (setq tabulated-list-format
-        [
-         ;; Claude Code, Codex, etc
-         ("Agent" 15 t)
-         ;; Project name
+        [("Agent" 15 t)
          ("Project" 20 t)
-         ;; Current working directory
          ("Directory" 30 t)
-         ;; Idle, Thinking, Needs Permission
-         ("Status" 5 t)
-         ;; How many prompts have been sent -- proxy for context rot
+         ("Status" 6 t)
          ("Prompts" 7 (lambda (a b)
                         (< (string-to-number (aref (cadr a) 4))
                            (string-to-number (aref (cadr b) 4)))))
-         ;; Recent activity (buffer modification tick)
-         ("Activity" 10 (lambda (a b)
-                          (< (string-to-number (aref (cadr a) 5))
-                             (string-to-number (aref (cadr b) 5)))))])
+         ("Last Active" 12 agent-shell-list--sort-by-activity)])
   (setq tabulated-list-padding 2)
-  (setq tabulated-list-sort-key '("Activity" . t))  ; descending by activity
+  (setq tabulated-list-sort-key '("Last Active" . t))
   (add-hook 'tabulated-list-revert-hook #'agent-shell-list--refresh nil t)
   (add-hook 'kill-buffer-hook #'agent-shell-list--stop-timer nil t)
   (tabulated-list-init-header))
+
+(defun agent-shell-list--format-time-ago (time)
+  "Format TIME as a human-readable relative time string.
+
+Returns strings like \"just now\", \"2m ago\", \"1h ago\", \"3d ago\"."
+  (if (null time)
+      "never"
+    (let* ((seconds (float-time (time-subtract (current-time) time)))
+           (minutes (/ seconds 60))
+           (hours (/ minutes 60))
+           (days (/ hours 24)))
+      (cond
+       ((< seconds 60) "just now")
+       ((< minutes 60) (format "%dm ago" (truncate minutes)))
+       ((< hours 24) (format "%dh ago" (truncate hours)))
+       (t (format "%dd ago" (truncate days)))))))
+
+(defun agent-shell-list--sort-by-activity (a b)
+  "Sort entries A and B by last activity time (most recent first)."
+  (let ((time-a (get-text-property 0 'agent-shell-list-time (aref (cadr a) 5)))
+        (time-b (get-text-property 0 'agent-shell-list-time (aref (cadr b) 5))))
+    (cond
+     ((and (null time-a) (null time-b)) nil)
+     ((null time-a) t)   ; nil sorts after real times
+     ((null time-b) nil)
+     (t (time-less-p time-a time-b)))))
 
 (defun agent-shell-list--has-pending-permission-p (state)
   "Return non-nil if STATE has any tool calls awaiting permission."
@@ -127,14 +144,17 @@ Returns a propertized string:
               (directory (or (agent-shell-cwd) ""))
               (status (agent-shell-list--get-status state))
               (request-count (or (map-elt state :request-count) 0))
-              (activity (buffer-modified-tick)))
+              (last-activity (map-elt state :last-activity-time))
+              (activity-str (propertize
+                             (agent-shell-list--format-time-ago last-activity)
+                             'agent-shell-list-time last-activity)))
          (list buffer
                (vector agent-name
                        project
                        directory
                        status
                        (number-to-string request-count)
-                       (number-to-string activity))))))
+                       activity-str)))))
    (agent-shell-buffers)))
 
 (defun agent-shell-list--refresh ()
