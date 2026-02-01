@@ -69,11 +69,11 @@
 
 \\{agent-shell-list-mode-map}"
   (setq tabulated-list-format
-        [("Agent" 15 t)
+        [("Project" 20 t)
+         ("Directory" 30 t)
+         ("Agent" 15 t)
          ("Model" 15 t)
          ("Mode" 12 t)
-         ("Project" 20 t)
-         ("Directory" 30 t)
          ("Status" 6 t)
          ("Prompts" 7 (lambda (a b)
                         (< (string-to-number (aref (cadr a) 6))
@@ -181,11 +181,11 @@ Returns the mode name if available, otherwise returns an empty string."
                              (agent-shell-list--format-time-ago last-activity)
                              'agent-shell-list-time last-activity)))
          (list buffer
-               (vector agent-name
+               (vector project
+                       directory
+                       agent-name
                        model-name
                        mode-name
-                       project
-                       directory
                        status
                        (number-to-string request-count)
                        activity-str)))))
