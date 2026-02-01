@@ -223,7 +223,7 @@ Returns a propertized string:
     (if-let ((viewport-buffer (agent-shell-viewport--buffer
                                :shell-buffer buffer)))
         (pop-to-buffer viewport-buffer)
-      (message "No viewport buffer available"))))
+      (user-error "no viewport buffer available"))))
 
 (defun agent-shell-list-open-transcript ()
   "Open the transcript for the agent at point."
@@ -239,14 +239,19 @@ Returns a propertized string:
     (with-current-buffer buffer
       (agent-shell-interrupt))))
 
-(defun agent-shell-list-new-shell ()
+(declare-function agent-shell-select-config "agent-shell")
+
+(defun agent-shell-list-new-shell (arg)
   "Start a new agent shell in the same project as the agent at point.
 
-Uses the same agent type as the selected shell."
-  (interactive)
+Uses the same agent type as the selected shell.  With prefix ARG,
+prompt to select a different agent type."
+  (interactive "P")
   (when-let ((buffer (agent-shell-list--get-buffer-at-point)))
     (let* ((state (with-current-buffer buffer (agent-shell--state)))
-           (config (map-elt state :agent-config))
+           (config (if arg
+                       (agent-shell-select-config :prompt "New agent: ")
+                     (map-elt state :agent-config)))
            (default-directory (with-current-buffer buffer
                                 (agent-shell-cwd))))
       (agent-shell--dwim :config config :new-shell t))))
