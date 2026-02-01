@@ -38,6 +38,7 @@
 
 (defvar agent-shell-prefer-viewport-interaction)
 
+(declare-function agent-shell-select-config "agent-shell")
 (declare-function agent-shell-buffers "agent-shell")
 (declare-function agent-shell--project-name "agent-shell-project")
 (declare-function agent-shell-cwd "agent-shell-project")
@@ -303,8 +304,6 @@ Added to `agent-shell-mode-hook'."
     (with-current-buffer buffer
       (agent-shell-set-session-model))
     (revert-buffer)))
-
-(declare-function agent-shell-select-config "agent-shell")
 
 (defun agent-shell-list-new-shell (arg)
   "Start a new agent shell in the same project as the agent at point.
