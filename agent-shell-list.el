@@ -279,28 +279,32 @@ Added to `agent-shell-mode-hook'."
   (interactive)
   (when-let ((buffer (agent-shell-list--get-buffer-at-point)))
     (with-current-buffer buffer
-      (agent-shell-interrupt))))
+      (agent-shell-interrupt))
+    (revert-buffer)))
 
 (defun agent-shell-list-cycle-session-mode ()
   "Cycle through session modes for the agent at point."
   (interactive)
   (when-let ((buffer (agent-shell-list--get-buffer-at-point)))
     (with-current-buffer buffer
-      (agent-shell-cycle-session-mode))))
+      (agent-shell-cycle-session-mode))
+    (revert-buffer)))
 
 (defun agent-shell-list-set-session-mode ()
   "Set session mode for the agent at point."
   (interactive)
   (when-let ((buffer (agent-shell-list--get-buffer-at-point)))
     (with-current-buffer buffer
-      (agent-shell-set-session-mode))))
+      (agent-shell-set-session-mode))
+    (revert-buffer)))
 
 (defun agent-shell-list-set-session-model ()
   "Set session model for the agent at point."
   (interactive)
   (when-let ((buffer (agent-shell-list--get-buffer-at-point)))
     (with-current-buffer buffer
-      (agent-shell-set-session-model))))
+      (agent-shell-set-session-model))
+    (revert-buffer)))
 
 (declare-function agent-shell-select-config "agent-shell")
 
