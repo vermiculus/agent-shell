@@ -132,12 +132,12 @@ than the rounded single-unit approximations appropriate for a status display."
 
 Returns a propertized string:
 - \"ask\" if any tool calls are awaiting permission
-- \"think\" if heartbeat status is busy
+- \"think\" if heartbeat status is started or busy
 - \"idle\" otherwise"
   (cond
    ((agent-shell-list--has-pending-permission-p state)
     (propertize "ask" 'face 'warning))
-   ((eq (map-nested-elt state '(:heartbeat :status)) 'busy)
+   ((memq (map-nested-elt state '(:heartbeat :status)) '(started busy))
     (propertize "think" 'face 'font-lock-keyword-face))
    (t
     (propertize "idle" 'face 'success))))
@@ -214,12 +214,9 @@ Returns the mode name if available, otherwise returns an empty string."
 (defun agent-shell-list--timer-refresh ()
   "Refresh the list if the buffer is visible."
   (when-let ((buf (get-buffer "*Agent Shells*")))
-    (if (get-buffer-window buf)
-        (with-current-buffer buf
-          (save-excursion
-            (revert-buffer)))
-      ;; Buffer not visible, stop timer
-      (agent-shell-list--stop-timer))))
+    (when (get-buffer-window buf)
+      (with-current-buffer buf
+        (revert-buffer)))))
 
 (defun agent-shell-list--on-shell-created ()
   "Refresh the agent shell list when a new shell is created.
