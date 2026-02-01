@@ -221,6 +221,13 @@ Returns the mode name if available, otherwise returns an empty string."
       ;; Buffer not visible, stop timer
       (agent-shell-list--stop-timer))))
 
+(defun agent-shell-list--on-shell-created ()
+  "Refresh the agent shell list when a new shell is created.
+Added to `agent-shell-mode-hook'."
+  (agent-shell-list--timer-refresh))
+
+(add-hook 'agent-shell-mode-hook #'agent-shell-list--on-shell-created)
+
 (defun agent-shell-list--get-buffer-at-point ()
   "Get the agent-shell buffer at point."
   (tabulated-list-get-id))
