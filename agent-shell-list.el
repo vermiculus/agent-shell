@@ -85,7 +85,10 @@
 (defun agent-shell-list--format-time-ago (time)
   "Format TIME as a human-readable relative time string.
 
-Returns strings like \"just now\", \"2m ago\", \"1h ago\", \"3d ago\"."
+Returns rounded approximations like \"just now\", \"2m ago\", \"1h ago\",
+\"3d ago\".  We use our own implementation rather than `format-seconds'
+because that function provides exact durations (e.g., \"1h 2m 5s\") rather
+than the rounded single-unit approximations appropriate for a status display."
   (if (null time)
       "never"
     (let* ((seconds (float-time (time-subtract (current-time) time)))
