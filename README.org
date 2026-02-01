@@ -401,6 +401,30 @@ Start a specific agent shell session directly:
 - =M-x agent-shell-droid-start-agent= - Start a Factory Droid agent session
 - =M-x agent-shell-pi-start-agent= - Start a Pi coding agent session
 
+*** Managing Multiple Agent Shells
+
+=M-x agent-shell-list= - Display a tabulated list of all active agent shells.
+
+The agent shell list provides a centralized view to manage multiple agent sessions across different projects, similar to =list-packages= or =list-processes=. Features include:
+
+- View all active agents with their status, project, directory, and activity
+- Auto-refresh while the buffer is visible
+- Quick access to shell, viewport, and transcript buffers
+- Interrupt or kill agents
+- Start new shells in the same project
+
+*Key bindings in agent-shell-list:*
+
+- =RET= - Switch to shell or viewport (respects =agent-shell-prefer-viewport-interaction=)
+- =o= - Switch to shell buffer directly
+- =v= - Switch to viewport buffer
+- =t= - Open transcript
+- =i= - Interrupt agent
+- =N= - Start new shell in same project (with prefix arg, choose different agent type)
+- =k= - Kill agent buffer
+- =g= - Refresh list
+- =q= - Quit window
+
 *** Setting a default agent for all new shells
 
 You can set a default agent to use for all new shells started via =agent-shell= like so:

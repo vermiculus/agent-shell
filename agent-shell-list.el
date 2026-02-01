@@ -112,7 +112,7 @@ than the rounded single-unit approximations appropriate for a status display."
      (t (time-less-p time-a time-b)))))
 
 (defun agent-shell-list--has-pending-permission-p (state)
-  "Return non-nil if STATE has any tool calls awaiting permission."
+  "Return non-nil if STATE has any tool call awaiting permission."
   (when-let ((tool-calls (map-elt state :tool-calls)))
     (seq-some (lambda (tool-call-entry)
                 (map-elt (cdr tool-call-entry) :permission-request-id))
@@ -223,7 +223,7 @@ Returns a propertized string:
     (if-let ((viewport-buffer (agent-shell-viewport--buffer
                                :shell-buffer buffer)))
         (pop-to-buffer viewport-buffer)
-      (user-error "no viewport buffer available"))))
+      (user-error "No viewport buffer available"))))
 
 (defun agent-shell-list-open-transcript ()
   "Open the transcript for the agent at point."
