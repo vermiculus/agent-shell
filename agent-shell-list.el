@@ -47,7 +47,8 @@
 (declare-function agent-shell-open-transcript "agent-shell")
 (declare-function agent-shell-viewport--buffer "agent-shell-viewport")
 (declare-function agent-shell--dwim "agent-shell")
-(declare-function agent-shell--resolve-session-mode-name "agent-shell")
+(declare-function agent-shell--get-model-name "agent-shell")
+(declare-function agent-shell--get-mode-name "agent-shell")
 (declare-function agent-shell-cycle-session-mode "agent-shell")
 (declare-function agent-shell-set-session-mode "agent-shell")
 (declare-function agent-shell-set-session-model "agent-shell")
@@ -143,30 +144,6 @@ Returns a propertized string:
    (t
     (propertize "idle" 'face 'success))))
 
-(defun agent-shell-list--get-model-name (state)
-  "Get the current model name from STATE.
-
-Returns the model name if available, otherwise returns an empty string."
-  (or (map-elt (seq-find (lambda (model)
-                           (string= (map-elt model :model-id)
-                                    (map-nested-elt state '(:session :model-id))))
-                         (map-nested-elt state '(:session :models)))
-               :name)
-      (map-nested-elt state '(:session :model-id))
-      ""))
-
-(defun agent-shell-list--get-mode-name (state)
-  "Get the current session mode name from STATE.
-
-Returns the mode name if available, otherwise returns an empty string."
-  (if-let ((mode-id (map-nested-elt state '(:session :mode-id))))
-      (or (agent-shell--resolve-session-mode-name
-           mode-id
-           (map-nested-elt state '(:session :modes)))
-          mode-id
-          "")
-    ""))
-
 (defun agent-shell-list--entries ()
   "Generate entries for the agent shell list."
   (mapcar
@@ -177,8 +154,8 @@ Returns the mode name if available, otherwise returns an empty string."
               (agent-name (or (map-elt config :mode-line-name)
                               (map-elt config :buffer-name)
                               "Unknown"))
-              (model-name (agent-shell-list--get-model-name state))
-              (mode-name (agent-shell-list--get-mode-name state))
+              (model-name (or (agent-shell--get-model-name state) ""))
+              (mode-name (or (agent-shell--get-mode-name state) ""))
               (project (or (agent-shell--project-name) ""))
               (status (agent-shell-list--get-status state))
               (request-count (or (map-elt state :request-count) 0))

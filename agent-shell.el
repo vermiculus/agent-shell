@@ -5264,6 +5264,27 @@ See https://agentclientprotocol.com/protocol/session-modes for details."
                              available-session-modes)))
     (map-elt mode :name)))
 
+(defun agent-shell--get-model-name (state)
+  "Get the current model name from STATE.
+
+Returns the model name if available, otherwise returns nil."
+  (or (map-elt (seq-find (lambda (model)
+                           (string= (map-elt model :model-id)
+                                    (map-nested-elt state '(:session :model-id))))
+                         (map-nested-elt state '(:session :models)))
+               :name)
+      (map-nested-elt state '(:session :model-id))))
+
+(defun agent-shell--get-mode-name (state)
+  "Get the current session mode name from STATE.
+
+Returns the mode name if available, otherwise returns nil."
+  (when-let ((mode-id (map-nested-elt state '(:session :mode-id))))
+    (or (agent-shell--resolve-session-mode-name
+         mode-id
+         (agent-shell--get-available-modes state))
+        mode-id)))
+
 (defun agent-shell--busy-indicator-frame ()
   "Return busy frame string or nil if not busy."
   (when-let* ((agent-shell-show-busy-indicator)
