@@ -46,6 +46,7 @@
 (declare-function agent-shell-open-transcript "agent-shell")
 (declare-function agent-shell-viewport--buffer "agent-shell-viewport")
 (declare-function agent-shell--dwim "agent-shell")
+(declare-function agent-shell--resolve-session-mode-name "agent-shell")
 
 (defvar agent-shell-list--refresh-timer nil
   "Timer for auto-refreshing the agent shell list.")
@@ -69,12 +70,14 @@
 \\{agent-shell-list-mode-map}"
   (setq tabulated-list-format
         [("Agent" 15 t)
+         ("Model" 15 t)
+         ("Mode" 12 t)
          ("Project" 20 t)
          ("Directory" 30 t)
          ("Status" 6 t)
          ("Prompts" 7 (lambda (a b)
-                        (< (string-to-number (aref (cadr a) 4))
-                           (string-to-number (aref (cadr b) 4)))))
+                        (< (string-to-number (aref (cadr a) 6))
+                           (string-to-number (aref (cadr b) 6)))))
          ("Last Active" 12 agent-shell-list--sort-by-activity)])
   (setq tabulated-list-padding 2)
   (setq tabulated-list-sort-key '("Last Active" . t))
@@ -103,8 +106,8 @@ than the rounded single-unit approximations appropriate for a status display."
 
 (defun agent-shell-list--sort-by-activity (a b)
   "Sort entries A and B by last activity time (most recent first)."
-  (let ((time-a (get-text-property 0 'agent-shell-list-time (aref (cadr a) 5)))
-        (time-b (get-text-property 0 'agent-shell-list-time (aref (cadr b) 5))))
+  (let ((time-a (get-text-property 0 'agent-shell-list-time (aref (cadr a) 7)))
+        (time-b (get-text-property 0 'agent-shell-list-time (aref (cadr b) 7))))
     (cond
      ((and (null time-a) (null time-b)) nil)
      ((null time-a) t)   ; nil sorts after real times
@@ -133,6 +136,30 @@ Returns a propertized string:
    (t
     (propertize "idle" 'face 'success))))
 
+(defun agent-shell-list--get-model-name (state)
+  "Get the current model name from STATE.
+
+Returns the model name if available, otherwise returns an empty string."
+  (or (map-elt (seq-find (lambda (model)
+                           (string= (map-elt model :model-id)
+                                    (map-nested-elt state '(:session :model-id))))
+                         (map-nested-elt state '(:session :models)))
+               :name)
+      (map-nested-elt state '(:session :model-id))
+      ""))
+
+(defun agent-shell-list--get-mode-name (state)
+  "Get the current session mode name from STATE.
+
+Returns the mode name if available, otherwise returns an empty string."
+  (if-let ((mode-id (map-nested-elt state '(:session :mode-id))))
+      (or (agent-shell--resolve-session-mode-name
+           mode-id
+           (map-nested-elt state '(:session :modes)))
+          mode-id
+          "")
+    ""))
+
 (defun agent-shell-list--entries ()
   "Generate entries for the agent shell list."
   (mapcar
@@ -143,6 +170,8 @@ Returns a propertized string:
               (agent-name (or (map-elt config :mode-line-name)
                               (map-elt config :buffer-name)
                               "Unknown"))
+              (model-name (agent-shell-list--get-model-name state))
+              (mode-name (agent-shell-list--get-mode-name state))
               (project (or (agent-shell--project-name) ""))
               (directory (or (agent-shell-cwd) ""))
               (status (agent-shell-list--get-status state))
@@ -153,6 +182,8 @@ Returns a propertized string:
                              'agent-shell-list-time last-activity)))
          (list buffer
                (vector agent-name
+                       model-name
+                       mode-name
                        project
                        directory
                        status

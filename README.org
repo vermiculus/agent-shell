@@ -407,7 +407,7 @@ Start a specific agent shell session directly:
 
 The agent shell list provides a centralized view to manage multiple agent sessions across different projects, similar to =list-packages= or =list-processes=. Features include:
 
-- View all active agents with their status, project, directory, and activity
+- View all active agents with their model, mode, status, project, directory, and activity
 - Auto-refresh while the buffer is visible
 - Quick access to shell, viewport, and transcript buffers
 - Interrupt or kill agents
