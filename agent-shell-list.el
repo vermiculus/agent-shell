@@ -39,8 +39,8 @@
 (defvar agent-shell-prefer-viewport-interaction)
 
 (declare-function agent-shell-buffers "agent-shell")
-(declare-function agent-shell-cwd "agent-shell-project")
 (declare-function agent-shell--project-name "agent-shell-project")
+(declare-function agent-shell-cwd "agent-shell-project")
 (declare-function agent-shell--state "agent-shell")
 (declare-function agent-shell-interrupt "agent-shell")
 (declare-function agent-shell-open-transcript "agent-shell")
@@ -70,14 +70,13 @@
 \\{agent-shell-list-mode-map}"
   (setq tabulated-list-format
         [("Project" 20 t)
-         ("Directory" 30 t)
          ("Agent" 15 t)
          ("Model" 15 t)
          ("Mode" 12 t)
          ("Status" 6 t)
          ("Prompts" 7 (lambda (a b)
-                        (< (string-to-number (aref (cadr a) 6))
-                           (string-to-number (aref (cadr b) 6)))))
+                        (< (string-to-number (aref (cadr a) 5))
+                           (string-to-number (aref (cadr b) 5)))))
          ("Last Active" 12 agent-shell-list--sort-by-activity)])
   (setq tabulated-list-padding 2)
   (setq tabulated-list-sort-key '("Last Active" . t))
@@ -106,8 +105,8 @@ than the rounded single-unit approximations appropriate for a status display."
 
 (defun agent-shell-list--sort-by-activity (a b)
   "Sort entries A and B by last activity time (most recent first)."
-  (let ((time-a (get-text-property 0 'agent-shell-list-time (aref (cadr a) 7)))
-        (time-b (get-text-property 0 'agent-shell-list-time (aref (cadr b) 7))))
+  (let ((time-a (get-text-property 0 'agent-shell-list-time (aref (cadr a) 6)))
+        (time-b (get-text-property 0 'agent-shell-list-time (aref (cadr b) 6))))
     (cond
      ((and (null time-a) (null time-b)) nil)
      ((null time-a) t)   ; nil sorts after real times
@@ -173,7 +172,6 @@ Returns the mode name if available, otherwise returns an empty string."
               (model-name (agent-shell-list--get-model-name state))
               (mode-name (agent-shell-list--get-mode-name state))
               (project (or (agent-shell--project-name) ""))
-              (directory (or (agent-shell-cwd) ""))
               (status (agent-shell-list--get-status state))
               (request-count (or (map-elt state :request-count) 0))
               (last-activity (map-elt state :last-activity-time))
@@ -182,7 +180,6 @@ Returns the mode name if available, otherwise returns an empty string."
                              'agent-shell-list-time last-activity)))
          (list buffer
                (vector project
-                       directory
                        agent-name
                        model-name
                        mode-name
