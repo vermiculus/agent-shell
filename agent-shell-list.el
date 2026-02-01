@@ -181,9 +181,8 @@ Returns a propertized string:
   (when-let ((buf (get-buffer "*Agent Shells*")))
     (if (get-buffer-window buf)
         (with-current-buffer buf
-          (let ((pos (point)))
-            (revert-buffer)
-            (goto-char pos)))
+          (save-excursion
+            (revert-buffer)))
       ;; Buffer not visible, stop timer
       (agent-shell-list--stop-timer))))
 
