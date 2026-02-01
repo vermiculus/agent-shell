@@ -223,7 +223,8 @@ Returns the mode name if available, otherwise returns an empty string."
 Added to `agent-shell-mode-hook'."
   (agent-shell-list--timer-refresh))
 
-(add-hook 'agent-shell-mode-hook #'agent-shell-list--on-shell-created)
+(with-eval-after-load 'agent-shell
+  (add-hook 'agent-shell-mode-hook #'agent-shell-list--on-shell-created))
 
 (defun agent-shell-list--get-buffer-at-point ()
   "Get the agent-shell buffer at point."
