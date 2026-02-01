@@ -124,7 +124,7 @@ than the rounded single-unit approximations appropriate for a status display."
   "Return non-nil if STATE has any tool call awaiting permission."
   (when-let ((tool-calls (map-elt state :tool-calls)))
     (seq-some (lambda (tool-call-entry)
-                (map-elt (cdr tool-call-entry) :permission-request-id))
+                (equal (map-elt (cdr tool-call-entry) :status) "pending"))
               tool-calls)))
 
 (defun agent-shell-list--get-status (state)
