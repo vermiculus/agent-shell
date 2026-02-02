@@ -70,6 +70,7 @@ Each value is a cons cell (TIMESTAMP . DESCRIPTION).")
 (defvar agent-shell-list-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map tabulated-list-mode-map)
+    (define-key map (kbd "g") #'agent-shell-list-refresh)
     (define-key map (kbd "RET") #'agent-shell-list-goto-default)
     (define-key map (kbd "o") #'agent-shell-list-goto-shell)
     (define-key map (kbd "O") #'agent-shell-list-goto-viewport)
@@ -227,12 +228,14 @@ Called on explicit refresh to ensure fresh data."
   (clrhash agent-shell-list--branch-cache))
 
 (defun agent-shell-list--refresh ()
-  "Refresh the agent shell list entries.
-When called interactively (via `g' or `revert-buffer'), also clears
-the branch description cache to fetch fresh data."
-  (when (called-interactively-p 'any)
-    (agent-shell-list--clear-branch-cache))
+  "Refresh the agent shell list entries."
   (setq tabulated-list-entries (agent-shell-list--entries)))
+
+(defun agent-shell-list-refresh ()
+  "Refresh the agent shell list, clearing the branch cache."
+  (interactive)
+  (agent-shell-list--clear-branch-cache)
+  (revert-buffer))
 
 (defun agent-shell-list--start-timer ()
   "Start the auto-refresh timer."
