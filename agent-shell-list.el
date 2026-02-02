@@ -35,6 +35,7 @@
 
 (require 'tabulated-list)
 (require 'map)
+(require 's)
 
 (defvar agent-shell-prefer-viewport-interaction)
 
@@ -134,12 +135,12 @@ otherwise returns the branch name, or an empty string if not in a git repo.
 Multi-line descriptions are truncated to the first line with an ellipsis."
   (let ((default-directory (agent-shell-cwd)))
     (if-let ((branch (magit-get-current-branch)))
-        (let ((lines (split-string
-                      (or (magit-get "branch" branch "description") branch)
-                      "\n" t " \t")))
+        (let ((lines (s-lines (s-trim
+                               (or (magit-get "branch" branch "description")
+                                   branch)))))
           (if (cdr lines)
               (concat (car lines) "...")
-            (or (car lines) branch)))
+            (car lines)))
       "")))
 
 (defun agent-shell-list--has-pending-permission-p (state)
