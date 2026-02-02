@@ -342,20 +342,12 @@ Added to `agent-shell-mode-hook'."
       (agent-shell-set-session-model))
     (revert-buffer)))
 
-(defun agent-shell-list-new-shell (arg)
-  "Start a new agent shell in the same project as the agent at point.
-
-Uses the same agent type as the selected shell.  With prefix ARG,
-prompt to select a different agent type."
-  (interactive "P")
-  (when-let ((buffer (agent-shell-list--get-buffer-at-point)))
-    (let* ((state (with-current-buffer buffer (agent-shell--state)))
-           (config (if arg
-                       (agent-shell-select-config :prompt "New agent: ")
-                     (map-elt state :agent-config)))
-           (default-directory (with-current-buffer buffer
-                                (agent-shell-cwd))))
-      (agent-shell--dwim :config config :new-shell t))))
+(defun agent-shell-list-new-shell ()
+  "Start a new agent shell, prompting for directory and agent type."
+  (interactive)
+  (let ((default-directory (read-directory-name "Directory: "))
+        (config (agent-shell-select-config :prompt "New agent: ")))
+    (agent-shell--dwim :config config :new-shell t)))
 
 (defun agent-shell-list-kill ()
   "Kill the agent buffer at point."
