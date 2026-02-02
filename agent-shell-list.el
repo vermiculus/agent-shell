@@ -38,6 +38,9 @@
 
 (defvar agent-shell-prefer-viewport-interaction)
 
+(declare-function magit-get-current-branch "magit-git")
+(declare-function magit-get "magit-git")
+
 (declare-function agent-shell-select-config "agent-shell")
 (declare-function agent-shell-buffers "agent-shell")
 (declare-function agent-shell--project-name "agent-shell-project")
@@ -86,7 +89,8 @@
          ("Prompts" 7 (lambda (a b)
                         (< (string-to-number (aref (cadr a) 5))
                            (string-to-number (aref (cadr b) 5)))))
-         ("Last Active" 12 agent-shell-list--sort-by-activity)])
+         ("Last Active" 12 agent-shell-list--sort-by-activity)
+         ("Branch" 25 t)])
   (setq tabulated-list-padding 2)
   (setq tabulated-list-sort-key '("Last Active" . t))
   (add-hook 'tabulated-list-revert-hook #'agent-shell-list--refresh nil t)
@@ -121,6 +125,17 @@ than the rounded single-unit approximations appropriate for a status display."
      ((null time-a) t)   ; nil sorts after real times
      ((null time-b) nil)
      (t (time-less-p time-a time-b)))))
+
+(defun agent-shell-list--get-branch-description ()
+  "Get the git branch description or branch name for the shell's directory.
+
+Returns the value of git config branch.BRANCH.description if set,
+otherwise returns the branch name, or an empty string if not in a git repo."
+  (let ((default-directory (agent-shell-cwd)))
+    (if-let ((branch (magit-get-current-branch)))
+        (or (magit-get "branch" branch "description")
+            branch)
+      "")))
 
 (defun agent-shell-list--has-pending-permission-p (state)
   "Return non-nil if STATE has any tool call awaiting permission."
@@ -157,6 +172,7 @@ Returns a propertized string:
               (model-name (or (agent-shell--get-model-name state) ""))
               (mode-name (or (agent-shell--get-mode-name state) ""))
               (project (or (agent-shell--project-name) ""))
+              (branch (agent-shell-list--get-branch-description))
               (status (agent-shell-list--get-status state))
               (request-count (or (map-elt state :request-count) 0))
               (last-activity (map-elt state :last-activity-time))
@@ -170,7 +186,8 @@ Returns a propertized string:
                        mode-name
                        status
                        (number-to-string request-count)
-                       activity-str)))))
+                       activity-str
+                       branch)))))
    (agent-shell-buffers)))
 
 (defun agent-shell-list--refresh ()
