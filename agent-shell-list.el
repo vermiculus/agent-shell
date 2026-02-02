@@ -342,12 +342,28 @@ Added to `agent-shell-mode-hook'."
       (agent-shell-set-session-model))
     (revert-buffer)))
 
+(defun agent-shell-list--shells-in-directory (directory)
+  "Return list of agent shell buffers with cwd matching DIRECTORY."
+  (let ((dir (expand-file-name directory)))
+    (seq-filter (lambda (buffer)
+                  (string= dir (expand-file-name
+                                (with-current-buffer buffer
+                                  (agent-shell-cwd)))))
+                (agent-shell-buffers))))
+
 (defun agent-shell-list-new-shell ()
-  "Start a new agent shell, prompting for project and agent type."
+  "Start a new agent shell, prompting for project and agent type.
+Warns if there are existing shells in the selected project."
   (interactive)
-  (let ((default-directory (project-prompt-project-dir))
-        (config (agent-shell-select-config :prompt "New agent: ")))
-    (agent-shell--dwim :config config :new-shell t)))
+  (let* ((default-directory (project-prompt-project-dir))
+         (existing (agent-shell-list--shells-in-directory default-directory)))
+    (when (or (null existing)
+              (yes-or-no-p
+               (format "%d shell(s) already exist in %s. Create another? "
+                       (length existing)
+                       (abbreviate-file-name default-directory))))
+      (let ((config (agent-shell-select-config :prompt "New agent: ")))
+        (agent-shell--dwim :config config :new-shell t)))))
 
 (defun agent-shell-list-kill ()
   "Kill the agent buffer at point."
