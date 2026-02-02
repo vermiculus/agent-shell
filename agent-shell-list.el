@@ -343,9 +343,9 @@ Added to `agent-shell-mode-hook'."
     (revert-buffer)))
 
 (defun agent-shell-list-new-shell ()
-  "Start a new agent shell, prompting for directory and agent type."
+  "Start a new agent shell, prompting for project and agent type."
   (interactive)
-  (let ((default-directory (read-directory-name "Directory: "))
+  (let ((default-directory (project-prompt-project-dir))
         (config (agent-shell-select-config :prompt "New agent: ")))
     (agent-shell--dwim :config config :new-shell t)))
 
