@@ -134,11 +134,17 @@ otherwise returns the branch name, or an empty string if not in a git repo.
 Multi-line descriptions are truncated to the first line with an ellipsis."
   (let ((default-directory (agent-shell-cwd)))
     (if-let ((branch (magit-get-current-branch)))
-        (let ((desc (or (magit-get "branch" branch "description")
-                        branch)))
-          (if (string-match "\n" desc)
-              (concat (substring desc 0 (match-beginning 0)) "...")
-            desc))
+        (let* ((desc (or (magit-get "branch" branch "description")
+                         branch))
+               (first-line (if (string-match "\n" desc)
+                               (substring desc 0 (match-beginning 0))
+                             desc))
+               (rest (if (string-match "\n" desc)
+                         (string-trim (substring desc (match-end 0)))
+                       "")))
+          (if (string-empty-p rest)
+              first-line
+            (concat first-line "...")))
       "")))
 
 (defun agent-shell-list--has-pending-permission-p (state)
