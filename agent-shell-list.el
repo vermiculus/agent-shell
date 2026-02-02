@@ -357,13 +357,14 @@ Warns if there are existing shells in the selected project."
   (interactive)
   (let* ((default-directory (project-prompt-project-dir))
          (existing (agent-shell-list--shells-in-directory default-directory)))
-    (when (or (null existing)
-              (yes-or-no-p
+    (when existing
+      (unless (yes-or-no-p
                (format "%d shell(s) already exist in %s. Create another? "
                        (length existing)
-                       (abbreviate-file-name default-directory))))
-      (let ((config (agent-shell-select-config :prompt "New agent: ")))
-        (agent-shell--dwim :config config :new-shell t)))))
+                       (abbreviate-file-name default-directory)))
+        (user-error "Aborted")))
+    (let ((config (agent-shell-select-config :prompt "New agent: ")))
+      (agent-shell--dwim :config config :new-shell t))))
 
 (defun agent-shell-list-kill ()
   "Kill the agent buffer at point."
