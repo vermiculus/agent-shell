@@ -60,6 +60,13 @@
 (defvar agent-shell-list--refresh-timer nil
   "Timer for auto-refreshing the agent shell list.")
 
+(defvar agent-shell-list--branch-cache (make-hash-table :test #'equal)
+  "Cache for branch descriptions, keyed by directory path.
+Each value is a cons cell (TIMESTAMP . DESCRIPTION).")
+
+(defconst agent-shell-list--branch-cache-ttl 60
+  "Time-to-live for branch cache entries in seconds.")
+
 (defvar agent-shell-list-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map tabulated-list-mode-map)
@@ -127,13 +134,11 @@ than the rounded single-unit approximations appropriate for a status display."
      ((null time-b) nil)
      (t (time-less-p time-a time-b)))))
 
-(defun agent-shell-list--get-branch-description ()
-  "Get the git branch description or branch name for the shell's directory.
-
-Returns the value of git config branch.BRANCH.description if set,
-otherwise returns the branch name, or an empty string if not in a git repo.
-Multi-line descriptions are truncated to the first line with an ellipsis."
-  (let ((default-directory (agent-shell-cwd)))
+(defun agent-shell-list--fetch-branch-description (directory)
+  "Fetch the git branch description for DIRECTORY.
+This performs the actual git calls.  Use
+`agent-shell-list--get-branch-description' for cached access."
+  (let ((default-directory directory))
     (if-let ((branch (magit-get-current-branch)))
         (let ((lines (s-lines (s-trim
                                (or (magit-get "branch" branch "description")
@@ -142,6 +147,26 @@ Multi-line descriptions are truncated to the first line with an ellipsis."
               (concat (car lines) "...")
             (car lines)))
       "")))
+
+(defun agent-shell-list--get-branch-description ()
+  "Get the git branch description or branch name for the shell's directory.
+
+Returns the value of git config branch.BRANCH.description if set,
+otherwise returns the branch name, or an empty string if not in a git repo.
+Multi-line descriptions are truncated to the first line with an ellipsis.
+
+Results are cached per directory for `agent-shell-list--branch-cache-ttl'
+seconds to avoid repeated git calls during auto-refresh."
+  (let* ((directory (agent-shell-cwd))
+         (cached (gethash directory agent-shell-list--branch-cache))
+         (now (float-time)))
+    (if (and cached
+             (< (- now (car cached)) agent-shell-list--branch-cache-ttl))
+        (cdr cached)
+      (let ((description (agent-shell-list--fetch-branch-description directory)))
+        (puthash directory (cons now description)
+                 agent-shell-list--branch-cache)
+        description))))
 
 (defun agent-shell-list--has-pending-permission-p (state)
   "Return non-nil if STATE has any tool call awaiting permission."
@@ -196,8 +221,17 @@ Returns a propertized string:
                        branch)))))
    (agent-shell-buffers)))
 
+(defun agent-shell-list--clear-branch-cache ()
+  "Clear the branch description cache.
+Called on explicit refresh to ensure fresh data."
+  (clrhash agent-shell-list--branch-cache))
+
 (defun agent-shell-list--refresh ()
-  "Refresh the agent shell list entries."
+  "Refresh the agent shell list entries.
+When called interactively (via `g' or `revert-buffer'), also clears
+the branch description cache to fetch fresh data."
+  (when (called-interactively-p 'any)
+    (agent-shell-list--clear-branch-cache))
   (setq tabulated-list-entries (agent-shell-list--entries)))
 
 (defun agent-shell-list--start-timer ()
