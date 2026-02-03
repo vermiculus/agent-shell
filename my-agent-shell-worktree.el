@@ -26,15 +26,17 @@ in its own isolated worktree."
          (sanitized-desc (replace-regexp-in-string
                           "[^a-zA-Z0-9]+" "-"
                           (downcase (string-trim description))))
-         (random-id (format "%08x" (random (expt 16 8))))
          (branch-name (concat "agent/" sanitized-desc))
-         (worktree-path (expand-file-name
-                         (concat repo-name "--agent-" random-id)
-                         (file-name-directory (directory-file-name repo-root))))
+         (worktree-parent (file-name-directory (directory-file-name repo-root)))
+         (worktree-path (let (path)
+                          (while (file-exists-p
+                                  (setq path (expand-file-name
+                                              (concat repo-name "--agent-"
+                                                      (format "%08x" (random (expt 16 8))))
+                                              worktree-parent))))
+                          path))
          (config (or agent-shell-preferred-agent-config
                      (agent-shell-select-config :prompt "Select agent: "))))
-    (when (file-exists-p worktree-path)
-      (user-error "Worktree already exists: %s" worktree-path))
     ;; Create the worktree with new branch
     (magit-worktree-branch worktree-path branch-name (magit-get-current-branch))
     ;; Start agent shell in the new worktree
