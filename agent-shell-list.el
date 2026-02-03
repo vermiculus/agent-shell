@@ -250,11 +250,23 @@ Called on explicit refresh to ensure fresh data."
     (setq agent-shell-list--refresh-timer nil)))
 
 (defun agent-shell-list--timer-refresh ()
-  "Refresh the list if the buffer is visible."
+  "Refresh the list if the buffer is visible.
+Preserves scroll position unless the set of agent buffers has changed."
   (when-let ((buf (get-buffer "*Agent Shells*")))
     (when (get-buffer-window buf)
       (with-current-buffer buf
-        (revert-buffer)))))
+        (let* ((old-buffers (mapcar #'car tabulated-list-entries))
+               (new-buffers (agent-shell-buffers))
+               (buffers-changed (not (equal old-buffers new-buffers))))
+          (if buffers-changed
+              (revert-buffer)
+            ;; Preserve scroll position when only updating existing entries
+            (let ((window (get-buffer-window buf))
+                  (point-pos (point))
+                  (window-start-pos (window-start (get-buffer-window buf))))
+              (revert-buffer)
+              (set-window-start window window-start-pos)
+              (goto-char point-pos))))))))
 
 (defun agent-shell-list--on-shell-created ()
   "Refresh the agent shell list when a new shell is created.
