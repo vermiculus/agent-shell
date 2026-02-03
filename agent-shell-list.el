@@ -143,7 +143,7 @@ This performs the actual git calls.  Use
     (if-let ((branch (magit-get-current-branch)))
         (let ((lines (s-lines (s-trim
                                (or (magit-get "branch" branch "description")
-                                   branch)))))
+                                   (propertize branch 'font-lock-face 'magit-branch-local))))))
           (if (cdr lines)
               (concat (car lines) "...")
             (car lines)))
