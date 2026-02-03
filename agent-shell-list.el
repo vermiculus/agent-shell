@@ -257,8 +257,8 @@ Preserves scroll position unless the set of agent buffers has changed."
       (with-current-buffer buf
         (let* ((old-buffers (mapcar #'car tabulated-list-entries))
                (new-buffers (agent-shell-buffers))
-               (buffers-changed (or (seq-difference old-buffers new-buffers)
-                                    (seq-difference new-buffers old-buffers))))
+               (buffers-changed (not (equal (seq-sort #'string< (mapcar #'buffer-name old-buffers))
+                                            (seq-sort #'string< (mapcar #'buffer-name new-buffers))))))
           (if buffers-changed
               (revert-buffer)
             ;; Preserve scroll position when only updating existing entries
