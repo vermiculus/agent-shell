@@ -18,10 +18,10 @@ This enables parallel agent processing by having each agent work
 in its own isolated worktree."
   (interactive
    (list (project-prompt-project-dir)
-         (read-string "Branch description: ")))
+         (read-string "Branch description (short, used for branch name): ")))
   (let* ((default-directory project)
          (repo-root (or (magit-toplevel)
-                        (user-error "Project is not a git repository: %s" project)))
+                        (user-error "Cannot create worktree; project is not a git repository: %s" project)))
          (repo-name (file-name-nondirectory (directory-file-name repo-root)))
          (sanitized-desc (replace-regexp-in-string
                           "[^a-zA-Z0-9]+" "-"
@@ -29,6 +29,7 @@ in its own isolated worktree."
          (branch-name (concat "agent/" sanitized-desc))
          (worktree-parent (file-name-directory (directory-file-name repo-root)))
          (worktree-path (let (path)
+                          ;; find an unused worktree path
                           (while (file-exists-p
                                   (setq path (expand-file-name
                                               (concat repo-name "--agent-"
