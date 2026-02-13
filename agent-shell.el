@@ -85,6 +85,36 @@ You may use \"􀇾\" as an SF Symbol on macOS."
   :type 'string
   :group 'agent-shell)
 
+(defcustom agent-shell-permission-policy-function
+  nil
+  "Function to automatically handle tool call permissions.
+
+Called with two arguments: STATE and REQUEST, as received by
+`agent-shell--on-request'.  The tool call's rawInput can be
+extracted with:
+
+  (map-nested-elt request \\='(params toolCall rawInput))
+
+for example, a Bash tool call may include:
+
+  (command . \"ls -la\")
+  (description . \"List files\")
+  (timeout . 60000)
+
+Should return one of:
+
+  `allow'  - Automatically allow the tool call (maps to
+             \"allow_once\").
+  `reject' - Automatically reject the tool call (maps to
+             \"reject_once\").
+  nil      - Fall through to the normal interactive permission
+             dialog.
+
+Set to nil to disable automatic permission handling entirely."
+  :type '(choice (const :tag "Disable" nil)
+                 (function :tag "Policy function"))
+  :group 'agent-shell)
+
 (defcustom agent-shell-thought-process-icon "💡"
   "Icon displayed during the AI's thought process.
 
@@ -1372,25 +1402,59 @@ COMMAND, when present, may be a shell command string or an argv vector."
                     (when-let ((diff (agent-shell--make-diff-info
                                       :tool-call .params.toolCall)))
                       (list (cons :diff diff)))))
-           (agent-shell--update-fragment
-            :state state
-            ;; block-id must be the same as the one used
-            ;; in agent-shell--delete-fragment param.
-            :block-id (format "permission-%s" .params.toolCall.toolCallId)
-            :body (with-current-buffer (map-elt state :buffer)
-                    (agent-shell--make-tool-call-permission-text
-                     :request request
-                     :client (map-elt state :client)
-                     :state state))
-            :expanded t
-            :navigation 'never)
-           (agent-shell-jump-to-latest-permission-button-row)
-           (when-let (((map-elt state :buffer))
-                      (viewport-buffer (agent-shell-viewport--buffer
-                                        :shell-buffer (map-elt state :buffer)
-                                        :existing-only t)))
-             (with-current-buffer viewport-buffer
-               (agent-shell-jump-to-latest-permission-button-row)))
+           ;; Check permission policy function for auto-handling
+           (if-let* ((policy-action
+                      (when agent-shell-permission-policy-function
+                        (condition-case err
+                            (with-current-buffer (map-elt state :buffer)
+                              (funcall agent-shell-permission-policy-function
+                                       state request))
+                          (error
+                           (message "agent-shell: permission policy error: %S" err)
+                           nil))))
+                     (option-id
+                      (agent-shell--resolve-policy-to-option
+                       policy-action .params.options)))
+               ;; Auto-handle: send response and render collapsed label.
+               (progn
+                 (acp-send-response
+                  :client (map-elt state :client)
+                  :response (acp-make-session-request-permission-response
+                             :request-id .id
+                             :option-id option-id))
+                 (map-put! state :tool-calls
+                           (map-delete (map-elt state :tool-calls)
+                                       .params.toolCall.toolCallId))
+                 (let ((title (or .params.toolCall.title
+                                  (map-nested-elt
+                                   request '(params toolCall rawInput command)))))
+                   (agent-shell--update-fragment
+                    :state state
+                    :block-id (format "auto-permission-%s" .params.toolCall.toolCallId)
+                    :label-left (agent-shell--make-auto-permission-text
+                                 :title title
+                                 :policy-action policy-action)
+                    :navigation 'never)))
+             ;; Fall through: show interactive permission dialog
+             (agent-shell--update-fragment
+              :state state
+              ;; block-id must be the same as the one used
+              ;; in agent-shell--delete-fragment param.
+              :block-id (format "permission-%s" .params.toolCall.toolCallId)
+              :body (with-current-buffer (map-elt state :buffer)
+                      (agent-shell--make-tool-call-permission-text
+                       :request request
+                       :client (map-elt state :client)
+                       :state state))
+              :expanded t
+              :navigation 'never)
+             (agent-shell-jump-to-latest-permission-button-row)
+             (when-let (((map-elt state :buffer))
+                        (viewport-buffer (agent-shell-viewport--buffer
+                                          :shell-buffer (map-elt state :buffer)
+                                          :existing-only t)))
+               (with-current-buffer viewport-buffer
+                 (agent-shell-jump-to-latest-permission-button-row))))
            (map-put! state :last-entry-type "session/request_permission"))
           ((equal .method "fs/read_text_file")
            (agent-shell--on-fs-read-text-file-request
@@ -4237,6 +4301,18 @@ for details."
 
 ;;; Permissions
 
+(cl-defun agent-shell--make-auto-permission-text (&key title policy-action)
+  "Create compact label text for an auto-handled permission.
+
+TITLE is the tool call title string.
+POLICY-ACTION is `allow' or `reject'."
+  (format "%s %s %s"
+          agent-shell-permission-icon
+          (propertize (or title "Tool call") 'font-lock-face 'font-lock-doc-markup-face)
+          (pcase policy-action
+            ('allow  (propertize "auto-allowed"  'font-lock-face 'success))
+            ('reject (propertize "auto-rejected" 'font-lock-face 'error)))))
+
 (cl-defun agent-shell--make-tool-call-permission-text (&key request client state)
   "Create text to render permission dialog using REQUEST, CLIENT, and STATE.
 
@@ -4564,6 +4640,22 @@ CHAR and OPTION are used for cursor sensor messages."
                                        (message "Press RET to %s" option)))))
                            button)))
     button))
+
+(defun agent-shell--resolve-policy-to-option (policy-action acp-options)
+  "Find the ACP option matching POLICY-ACTION from ACP-OPTIONS.
+
+POLICY-ACTION is `allow' or `reject'.
+ACP-OPTIONS is the list of PermissionOption alists from the request.
+
+Returns the optionId string, or nil if no matching option is found."
+  (when-let ((target-kind (pcase policy-action
+                            ('allow  "allow_once")
+                            ('reject "reject_once"))))
+    (map-elt
+     (seq-find (lambda (opt)
+                 (equal (map-elt opt 'kind) target-kind))
+               acp-options)
+     'optionId)))
 
 (defun agent-shell--make-permission-actions (acp-options)
   "Make actions from ACP-OPTIONS for shell rendering.

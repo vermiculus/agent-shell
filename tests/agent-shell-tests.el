@@ -1131,10 +1131,10 @@ code block content with spaces
                    "Yesterday, 15:45")))
   ;; Same year, older
   (should (string-match-p "^[A-Z][a-z]+ [0-9]+, [0-9]+:[0-9]+"
-                           (agent-shell--format-session-date "2026-01-05T09:00:00Z")))
+                          (agent-shell--format-session-date "2026-01-05T09:00:00Z")))
   ;; Different year
   (should (string-match-p "^[A-Z][a-z]+ [0-9]+, [0-9]\\{4\\}"
-                           (agent-shell--format-session-date "2025-06-15T12:00:00Z")))
+                          (agent-shell--format-session-date "2025-06-15T12:00:00Z")))
   ;; Invalid input falls back gracefully
   (should (equal (agent-shell--format-session-date "not-a-date")
                  "not-a-date")))
@@ -1206,6 +1206,27 @@ code block content with spaces
                          '("session/new"))))
         (should session-init-called)
         (should (equal (map-nested-elt agent-shell--state '(:session :id)) "new-session-789"))))))
+
+(ert-deftest agent-shell--resolve-policy-to-option-test ()
+  "Test `agent-shell--resolve-policy-to-option'."
+  (let ((acp-options '(((kind . "allow_once") (name . "Allow") (optionId . "opt-allow"))
+                       ((kind . "reject_once") (name . "Reject") (optionId . "opt-reject"))
+                       ((kind . "allow_always") (name . "Always Allow") (optionId . "opt-always")))))
+    ;; Allow maps to allow_once
+    (should (equal (agent-shell--resolve-policy-to-option 'allow acp-options)
+                   "opt-allow"))
+    ;; Reject maps to reject_once
+    (should (equal (agent-shell--resolve-policy-to-option 'reject acp-options)
+                   "opt-reject"))
+    ;; Unknown action returns nil
+    (should-not (agent-shell--resolve-policy-to-option 'unknown acp-options))
+    ;; Nil action returns nil
+    (should-not (agent-shell--resolve-policy-to-option nil acp-options)))
+
+  ;; Test when matching option is missing
+  (let ((acp-options '(((kind . "allow_always") (name . "Always Allow") (optionId . "opt-always")))))
+    (should-not (agent-shell--resolve-policy-to-option 'allow acp-options))
+    (should-not (agent-shell--resolve-policy-to-option 'reject acp-options))))
 
 (provide 'agent-shell-tests)
 ;;; agent-shell-tests.el ends here
