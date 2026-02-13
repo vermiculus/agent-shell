@@ -85,8 +85,38 @@ You may use \"􀇾\" as an SF Symbol on macOS."
   :type 'string
   :group 'agent-shell)
 
+(defcustom agent-shell-permission-policy-rules nil
+  "List of rules for automatically handling tool call permissions.
+
+Each element is a cons cell (MATCHER . ACTION) where:
+
+  MATCHER - Either an alist of regexp patterns or a function.
+
+            As an alist, each key corresponds to a rawInput field
+            (e.g., `command', `description') and each value is a
+            regexp.  All patterns must match for the rule to apply.
+
+            As a function, it is called with STATE and REQUEST
+            (as received by `agent-shell--on-request') and should
+            return non-nil if the rule matches.
+
+  ACTION  - The action to take: `allow' or `reject'.
+
+Rules are evaluated in order; the first matching rule wins.  If no
+rule matches, the normal interactive permission dialog is shown.
+
+Example:
+
+  \\='((((command . \"^ls \")) . allow)
+    (((command . \"^rm \")) . reject)
+    (my-custom-matcher . allow))"
+  :type '(repeat (cons (choice (alist :key-type symbol :value-type string)
+                               function)
+                       (choice (const allow) (const reject))))
+  :group 'agent-shell)
+
 (defcustom agent-shell-permission-policy-function
-  nil
+  #'agent-shell-permission-policy-evaluate-rules
   "Function to automatically handle tool call permissions.
 
 Called with two arguments: STATE and REQUEST, as received by
@@ -4640,6 +4670,25 @@ CHAR and OPTION are used for cursor sensor messages."
                                        (message "Press RET to %s" option)))))
                            button)))
     button))
+
+(defun agent-shell-permission-policy-evaluate-rules (state request)
+  "Evaluate REQUEST against `agent-shell-permission-policy-rules'.
+
+STATE and REQUEST are as received by `agent-shell--on-request'.
+
+Returns `allow', `reject', or nil.  See
+`agent-shell-permission-policy-function' for details."
+  (let ((raw-input (map-nested-elt request '(params toolCall rawInput))))
+    (cl-loop for (matcher . action) in agent-shell-permission-policy-rules
+             when (if (functionp matcher)
+                      (funcall matcher state request)
+                    (cl-loop for (key . pattern) in matcher
+                             always (let ((value (alist-get key raw-input)))
+                                      (cond
+                                       ((stringp value)
+                                        (string-match-p pattern value))
+                                       (t (equal pattern value))))))
+             return action)))
 
 (defun agent-shell--resolve-policy-to-option (policy-action acp-options)
   "Find the ACP option matching POLICY-ACTION from ACP-OPTIONS.

@@ -1207,6 +1207,112 @@ code block content with spaces
         (should session-init-called)
         (should (equal (map-nested-elt agent-shell--state '(:session :id)) "new-session-789"))))))
 
+(defun agent-shell-tests--make-request (raw-input)
+  "Wrap RAW-INPUT in a minimal ACP request structure for testing."
+  `((params . ((toolCall . ((rawInput . ,raw-input)))))))
+
+(ert-deftest agent-shell-permission-policy-evaluate-rules-test ()
+  "Test `agent-shell-permission-policy-evaluate-rules'."
+  ;; Test command-only rule matching
+  (let ((agent-shell-permission-policy-rules
+         '((((command . "^ls ")) . allow))))
+    (should (eq (agent-shell-permission-policy-evaluate-rules
+                 nil (agent-shell-tests--make-request
+                      '((command . "ls -la") (description . "List files"))))
+                'allow))
+    (should-not (agent-shell-permission-policy-evaluate-rules
+                 nil (agent-shell-tests--make-request
+                      '((command . "rm -rf /"))))))
+
+  ;; Test multiple command rules
+  (let ((agent-shell-permission-policy-rules
+         '((((command . "^ls ")) . allow)
+           (((command . "^rm ")) . reject))))
+    (should (eq (agent-shell-permission-policy-evaluate-rules
+                 nil (agent-shell-tests--make-request
+                      '((command . "ls -la"))))
+                'allow))
+    (should (eq (agent-shell-permission-policy-evaluate-rules
+                 nil (agent-shell-tests--make-request
+                      '((command . "rm -rf /"))))
+                'reject))
+    (should-not (agent-shell-permission-policy-evaluate-rules
+                 nil (agent-shell-tests--make-request
+                      '((command . "git status"))))))
+
+  ;; Test matching on description
+  (let ((agent-shell-permission-policy-rules
+         '((((description . "^List ")) . allow))))
+    (should (eq (agent-shell-permission-policy-evaluate-rules
+                 nil (agent-shell-tests--make-request
+                      '((command . "ls") (description . "List files"))))
+                'allow))
+    (should-not (agent-shell-permission-policy-evaluate-rules
+                 nil (agent-shell-tests--make-request
+                      '((command . "ls") (description . "Delete files"))))))
+
+  ;; Test multi-field rule (command + description must both match)
+  (let ((agent-shell-permission-policy-rules
+         '((((command . "^sh ") (description . "sleep")) . allow))))
+    (should (eq (agent-shell-permission-policy-evaluate-rules
+                 nil (agent-shell-tests--make-request
+                      '((command . "sh -c sleep") (description . "Run sleep"))))
+                'allow))
+    (should-not (agent-shell-permission-policy-evaluate-rules
+                 nil (agent-shell-tests--make-request
+                      '((command . "sh -c sleep") (description . "Run command"))))))
+
+  ;; Test first-match-wins ordering
+  (let ((agent-shell-permission-policy-rules
+         '((((command . "^ls ")) . allow)
+           (((command . ".")) . reject))))
+    (should (eq (agent-shell-permission-policy-evaluate-rules
+                 nil (agent-shell-tests--make-request
+                      '((command . "ls -la"))))
+                'allow))
+    (should (eq (agent-shell-permission-policy-evaluate-rules
+                 nil (agent-shell-tests--make-request
+                      '((command . "echo hi"))))
+                'reject)))
+
+  ;; Test empty rules returns nil
+  (let ((agent-shell-permission-policy-rules nil))
+    (should-not (agent-shell-permission-policy-evaluate-rules
+                 nil (agent-shell-tests--make-request
+                      '((command . "ls"))))))
+
+  ;; Test missing fields in raw-input default to empty string
+  (let ((agent-shell-permission-policy-rules
+         '((((command . "^$")) . allow))))
+    (should (eq (agent-shell-permission-policy-evaluate-rules
+                 nil (agent-shell-tests--make-request
+                      '((description . "something"))))
+                'allow)))
+
+  ;; Test function matcher
+  (let ((agent-shell-permission-policy-rules
+         `(((,(lambda (_state request)
+                (equal (alist-get 'command
+                                  (map-nested-elt request '(params toolCall rawInput)))
+                       "ls -la"))
+             . allow)))))
+    (should (eq (agent-shell-permission-policy-evaluate-rules
+                 nil (agent-shell-tests--make-request
+                      '((command . "ls -la"))))
+                'allow))
+    (should-not (agent-shell-permission-policy-evaluate-rules
+                 nil (agent-shell-tests--make-request
+                      '((command . "rm -rf /"))))))
+
+  ;; Test function matcher returning nil falls through
+  (let ((agent-shell-permission-policy-rules
+         `(((,(lambda (_state _request) nil) . reject)
+            (((command . ".")) . allow)))))
+    (should (eq (agent-shell-permission-policy-evaluate-rules
+                 nil (agent-shell-tests--make-request
+                      '((command . "anything"))))
+                'allow))))
+
 (ert-deftest agent-shell--resolve-policy-to-option-test ()
   "Test `agent-shell--resolve-policy-to-option'."
   (let ((acp-options '(((kind . "allow_once") (name . "Allow") (optionId . "opt-allow"))
