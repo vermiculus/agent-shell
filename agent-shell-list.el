@@ -94,10 +94,11 @@ Each value is a cons cell (TIMESTAMP . DESCRIPTION).")
          ("Agent" 15 t)
          ("Model" 15 t)
          ("Mode" 12 t)
+         ("Cost" 10 t)
          ("Status" 6 t)
          ("Prompts" 7 (lambda (a b)
-                        (< (string-to-number (aref (cadr a) 5))
-                           (string-to-number (aref (cadr b) 5)))))
+                        (< (string-to-number (aref (cadr a) 6))
+                           (string-to-number (aref (cadr b) 6)))))
          ("Last Active" 12 agent-shell-list--sort-by-activity)
          ("Branch" 25 t)])
   (setq tabulated-list-padding 2)
@@ -127,8 +128,8 @@ than the rounded single-unit approximations appropriate for a status display."
 
 (defun agent-shell-list--sort-by-activity (a b)
   "Sort entries A and B by last activity time (most recent first)."
-  (let ((time-a (get-text-property 0 'agent-shell-list-time (aref (cadr a) 6)))
-        (time-b (get-text-property 0 'agent-shell-list-time (aref (cadr b) 6))))
+  (let ((time-a (get-text-property 0 'agent-shell-list-time (aref (cadr a) 7)))
+        (time-b (get-text-property 0 'agent-shell-list-time (aref (cadr b) 7))))
     (cond
      ((and (null time-a) (null time-b)) nil)
      ((null time-a) t)   ; nil sorts after real times
@@ -191,6 +192,14 @@ Returns a propertized string:
    (t
     (propertize "idle" 'face 'success))))
 
+(defun agent-shell-list--get-cost (state)
+  "Format usage cost from STATE."
+  (let* ((usage (map-elt state :usage))
+         (cost (and usage (map-elt usage :cost-amount))))
+    (if (and cost (> cost 0))
+        (format "%s%.2f" (or (map-elt usage :cost-currency) "$") cost)
+      "")))
+
 (defun agent-shell-list--entries ()
   "Generate entries for the agent shell list."
   (mapcar
@@ -216,6 +225,7 @@ Returns a propertized string:
                        agent-name
                        model-name
                        mode-name
+                       (agent-shell-list--get-cost state)
                        status
                        (number-to-string request-count)
                        activity-str

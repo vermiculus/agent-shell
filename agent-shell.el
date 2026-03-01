@@ -2670,13 +2670,19 @@ The model contains all inputs needed to render the graphical header."
                       (or (agent-shell--resolve-session-mode-name
                            mode-id
                            (agent-shell--get-available-modes state))
-                          mode-id))))
+                          mode-id)))
+         (usage (map-elt state :usage))
+         (cost-string (when (and usage (map-elt usage :cost-amount) (> (map-elt usage :cost-amount) 0))
+                        (format "%s%.2f"
+                                (or (map-elt usage :cost-currency) "$")
+                                (map-elt usage :cost-amount)))))
     `((:buffer-name . ,(map-nested-elt state '(:agent-config :buffer-name)))
       (:icon-name . ,(map-nested-elt state '(:agent-config :icon-name)))
       (:model-id . ,(map-nested-elt state '(:session :model-id)))
       (:model-name . ,model-name)
       (:mode-id . ,mode-id)
       (:mode-name . ,mode-name)
+      (:cost-string . ,cost-string)
       (:directory . ,default-directory)
       (:frame-width . ,(frame-pixel-width))
       (:font-height . ,(frame-char-height))
@@ -2710,7 +2716,7 @@ BINDINGS is a list of alists defining key bindings to display, each with:
   (unless state
     (error "STATE is required"))
   (let* ((header-model (agent-shell--make-header-model state :qualifier qualifier :bindings bindings))
-         (text-header (format " %s%s%s @ %s%s%s"
+         (text-header (format " %s%s%s%s @ %s%s%s"
                               (propertize (concat (map-elt header-model :buffer-name) " Agent")
                                           'font-lock-face 'font-lock-variable-name-face)
                               (if (map-elt header-model :model-name)
@@ -2718,6 +2724,9 @@ BINDINGS is a list of alists defining key bindings to display, each with:
                                 "")
                               (if (map-elt header-model :mode-name)
                                   (concat " ➤ " (propertize (map-elt header-model :mode-name) 'font-lock-face 'font-lock-type-face))
+                                "")
+                              (if (map-elt header-model :cost-string)
+                                  (concat " " (propertize (map-elt header-model :cost-string) 'font-lock-face 'font-lock-constant-face))
                                 "")
                               (propertize (string-remove-suffix "/" (abbreviate-file-name (map-elt header-model :directory)))
                                           'font-lock-face 'font-lock-string-face)
@@ -2807,14 +2816,21 @@ BINDINGS is a list of alists defining key bindings to display, each with:
                                                                       (dx . "8"))
                                                                     "➤"))
                                         ;; Add session mode text
-                                        (dom-append-child text-node
-                                                          (dom-node 'tspan
-                                                                    `((fill . ,(or (face-attribute 'font-lock-type-face :foreground nil t)
-                                                                                   "#6699cc"))
-                                                                      (dx . "8"))
-                                                                    (map-elt header-model :mode-name))))
-                                      (when (map-elt header-model :context-indicator)
-                                        (let* (;; Extract the face from the propertized string
+                                                                              (dom-append-child text-node
+                                                                                                (dom-node 'tspan
+                                                                                                          `((fill . ,(or (face-attribute 'font-lock-type-face :foreground nil t)
+                                                                                                                         "#6699cc"))
+                                                                                                            (dx . "8"))
+                                                                                                          (map-elt header-model :mode-name))))
+                                                                            ;; Cost (optional)
+                                                                            (when (map-elt header-model :cost-string)
+                                                                              (dom-append-child text-node
+                                                                                                (dom-node 'tspan
+                                                                                                          `((fill . ,(or (face-attribute 'font-lock-constant-face :foreground nil t)
+                                                                                                                         "#008080"))
+                                                                                                            (dx . "8"))
+                                                                                                          (map-elt header-model :cost-string))))
+                                                                            (when (map-elt header-model :context-indicator)                                        (let* (;; Extract the face from the propertized string
                                                (face (get-text-property 0 'face (map-elt header-model :context-indicator)))
                                                ;; Get the foreground color from the face
                                                (color (if face
