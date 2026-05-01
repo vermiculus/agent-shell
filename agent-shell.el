@@ -62,6 +62,7 @@
 (require 'agent-shell-goose)
 (require 'agent-shell-heartbeat)
 (require 'agent-shell-active-message)
+(require 'agent-shell-list)
 (require 'agent-shell-kimi)
 (require 'agent-shell-kiro)
 (require 'agent-shell-mistral)
